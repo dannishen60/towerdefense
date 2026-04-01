@@ -7,9 +7,15 @@ Requires:
   - deploy-config.json (copy from deploy-config.example.json)
 
 API: https://space.ai-builders.com/backend/v1/deployments
+
+Quota: at most 2 concurrent services. If POST returns HTTP 429, run:
+  python deploy.py list
+then set deploy-config.json "service_name" to an existing name to replace that app,
+or ask instructors to retire an old deployment.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -34,13 +40,71 @@ def load_dotenv(path: Path) -> None:
             os.environ[key] = val
 
 
-def main() -> int:
-    root = Path(__file__).resolve().parent
+def get_token(root: Path) -> str | None:
     load_dotenv(root / ".env")
     token = os.environ.get("AI_BUILDER_TOKEN", "").strip()
     if not token:
         print("Set AI_BUILDER_TOKEN in .env (see .env.example).", file=sys.stderr)
+        return None
+    return token
+
+
+def cmd_list(root: Path, token: str) -> int:
+    """GET /v1/deployments — show active deployments and URLs."""
+    req = Request(
+        f"{BACKEND}/v1/deployments",
+        headers={"Authorization": f"Bearer {token}"},
+        method="GET",
+    )
+    try:
+        with urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except HTTPError as e:
+        err = e.read().decode("utf-8", errors="replace")
+        print(f"HTTP {e.code}: {err}", file=sys.stderr)
         return 1
+    except URLError as e:
+        print(f"Request failed: {e}", file=sys.stderr)
+        return 1
+
+    limit = data.get("limit", "?")
+    active = data.get("active_count", "?")
+    print(f"Deployment limit: {active}/{limit} active\n")
+    for d in data.get("deployments") or []:
+        name = d.get("service_name", "?")
+        url = d.get("public_url") or "(not ready yet)"
+        st = d.get("status", "?")
+        repo = d.get("repo_url", "")
+        print(f"  service_name: {name}")
+        print(f"  public_url:   {url}")
+        print(f"  status:       {st}")
+        if repo:
+            print(f"  repo_url:     {repo}")
+        print()
+    print(
+        "To replace an app: put its service_name in deploy-config.json and run python deploy.py again."
+    )
+    return 0
+
+
+def main() -> int:
+    root = Path(__file__).resolve().parent
+    ap = argparse.ArgumentParser(description="Deploy AI Builders Space or list deployments.")
+    ap.add_argument(
+        "command",
+        nargs="?",
+        default="deploy",
+        choices=("deploy", "list"),
+        help="deploy (default) or list active deployments",
+    )
+    args = ap.parse_args()
+
+    token = get_token(root)
+    if not token:
+        return 1
+
+    if args.command == "list":
+        return cmd_list(root, token)
 
     cfg_path = root / "deploy-config.json"
     if not cfg_path.is_file():
@@ -84,6 +148,13 @@ def main() -> int:
     except HTTPError as e:
         err = e.read().decode("utf-8", errors="replace")
         print(f"HTTP {e.code}: {err}", file=sys.stderr)
+        if e.code == 429 and "active deployment" in err.lower():
+            print(
+                "\nTip: You are at the 2-service limit. Run:  python deploy.py list\n"
+                "Then set deploy-config.json \"service_name\" to one of those names to redeploy over it,\n"
+                "or email instructors to retire an old service.",
+                file=sys.stderr,
+            )
         return 1
     except URLError as e:
         print(f"Request failed: {e}", file=sys.stderr)

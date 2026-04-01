@@ -264,6 +264,17 @@ const ENEMY_TYPES = {
     powerDesc: "Always 30 HP. When destroyed, becomes a random non-boss enemy.",
     fixedHp: 30,
   },
+  wildcard_capsule: {
+    id: "wildcard_capsule",
+    name: "Wildcard Capsule",
+    color: "#f59e0b",
+    hpBase: 1,
+    speedMult: 0.98,
+    power: "transform",
+    powerDesc:
+      "Fixed 50 HP. When destroyed, becomes a random non-boss minion — any type in the roster, including Sneak Attacker.",
+    fixedHp: 50,
+  },
   bomber: {
     id: "bomber",
     name: "Bomber",
@@ -680,8 +691,8 @@ const MAPS = {
   },
 };
 
-let PATH_WAYPOINTS = [...MAPS.classic.waypoints];
-let BASE = { ...MAPS.classic.base };
+let PATH_WAYPOINTS = [...MAPS.space_ribbon.waypoints];
+let BASE = { ...MAPS.space_ribbon.base };
 let PATH_CELL_KEYS = new Set();
 let TOTAL_PATH_LEN = 0;
 
@@ -700,7 +711,7 @@ const warSolidCells = new Set();
 /** War: brush — buildable; shots through brush deal less damage. */
 const warCoverCells = new Set();
 /** Campaign map when mode is Special (portal). */
-let specialCampaignMapId = "forest";
+let specialCampaignMapId = "space_ribbon";
 
 /** Raider / War: units you send along the path (same `enemies` array, flagged). */
 let botDefenders = [];
@@ -920,7 +931,7 @@ function poolForWave(waveNum) {
     pool.push("ward", "shell_bug");
   }
   if (waveNum >= 5) {
-    pool.push("weaver", "rainbow_block");
+    pool.push("weaver", "rainbow_block", "wildcard_capsule");
   }
   if (waveNum >= 6) {
     pool.push("skimmer", "moss_wisp");
@@ -1098,6 +1109,7 @@ function scaledEnemyHp(typeId, waveNum) {
 /** Random type when Rainbow Block breaks (no bosses, no second rainbow). */
 const RAINBOW_EXCLUDED_ENEMY_IDS = new Set([
   "rainbow_block",
+  "wildcard_capsule",
   "bomber",
   "buffer",
   "ghost_block",
@@ -1113,6 +1125,12 @@ function pickRainbowTransformTypeId() {
   const pool = Object.keys(ENEMY_TYPES).filter(
     (id) => !ENEMY_TYPES[id].isBoss && !RAINBOW_EXCLUDED_ENEMY_IDS.has(id)
   );
+  return pool[Math.floor(Math.random() * pool.length)] || "crawler";
+}
+
+/** Random non-boss when Wildcard Capsule breaks — includes Sneak Attacker; excludes only this shell. */
+function pickWildcardCapsuleTransformTypeId() {
+  const pool = Object.keys(ENEMY_TYPES).filter((id) => !ENEMY_TYPES[id].isBoss && id !== "wildcard_capsule");
   return pool[Math.floor(Math.random() * pool.length)] || "crawler";
 }
 
@@ -2147,8 +2165,8 @@ let waveCooldown = 0;
 let gameOver = false;
 let won = false;
 let awaitingWaveClear = false;
-let currentMapId = "forest";
-let currentTheme = "forest";
+let currentMapId = "space_ribbon";
+let currentTheme = "space_map";
 let currentDifficultyId = "medium";
 /** @type {string[]} */
 let waveQueue = [];
@@ -2830,11 +2848,15 @@ function updateProjectiles(dt, now) {
       }
       applyDamageToEnemy(e, p.damage, now, p);
       if (e.hp <= 0) {
-        if (e.enemyTypeId === "rainbow_block") {
+        if (e.enemyTypeId === "rainbow_block" || e.enemyTypeId === "wildcard_capsule") {
           if (typeof playSoundRainbowPop === "function") playSoundRainbowPop();
           gold += Math.floor(goldForEnemyKill(e) * 0.5);
           updateHud();
-          transformEnemyInPlace(e, pickRainbowTransformTypeId());
+          const inner =
+            e.enemyTypeId === "rainbow_block"
+              ? pickRainbowTransformTypeId()
+              : pickWildcardCapsuleTransformTypeId();
+          transformEnemyInPlace(e, inner);
           for (let i = 0; i < 18; i++) {
             particles.push({
               x: tx,
@@ -4694,6 +4716,13 @@ function drawEnemies() {
       g.addColorStop(0, `hsl(${(hue + 0) % 360}, 95%, 58%)`);
       g.addColorStop(0.5, `hsl(${(hue + 120) % 360}, 90%, 55%)`);
       g.addColorStop(1, `hsl(${(hue + 240) % 360}, 95%, 52%)`);
+      ctx.fillStyle = g;
+    } else if (e.enemyTypeId === "wildcard_capsule") {
+      const hue = (performance.now() / 24) % 360;
+      const g = ctx.createLinearGradient(e.x - s / 2, e.y - s / 2, e.x + s / 2, e.y + s / 2);
+      g.addColorStop(0, `hsl(${(hue + 40) % 360}, 88%, 52%)`);
+      g.addColorStop(0.45, `hsl(${(hue + 200) % 360}, 85%, 48%)`);
+      g.addColorStop(1, `hsl(${(hue + 300) % 360}, 90%, 55%)`);
       ctx.fillStyle = g;
     } else {
       ctx.fillStyle = e.color;

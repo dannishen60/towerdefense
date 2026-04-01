@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Live deploy: must show Tower Defense in the tab; if you still see the old app, the new Docker build did not go live yet. -->
+  <meta name="application-name" content="Tower Defense" />
   <title>Tower Defense</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -44,7 +46,7 @@
             <option value="metro">Metro Core</option>
             <option value="enemys_base">Enemy's Base (+10% enemy HP &amp; speed)</option>
             <option value="math_contest">Math Contest</option>
-            <option value="space_ribbon">Space Ribbon</option>
+            <option value="space_ribbon" selected>Space Ribbon</option>
           </select>
 
           <label class="map-label" for="difficulty-select">Difficulty</label>
@@ -88,7 +90,7 @@
             <option value="classic">Training Ground</option>
             <option value="enemys_base">Enemy's Base (+10% enemy HP &amp; speed)</option>
             <option value="math_contest">Math Contest</option>
-            <option value="space_ribbon">Space Ribbon</option>
+            <option value="space_ribbon" selected>Space Ribbon</option>
           </select>
         </div>
 
