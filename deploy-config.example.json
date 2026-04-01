@@ -1,0 +1,6 @@
+{
+  "repo_url": "https://github.com/YOUR_GITHUB_USERNAME/tower-defense",
+  "service_name": "tower-defense-YOURNAME",
+  "branch": "main",
+  "port": 8000
+}

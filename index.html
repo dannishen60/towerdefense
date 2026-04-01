@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tower Defense</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <h1>Tower Defense</h1>
+      <div class="stats">
+        <button type="button" id="sound-toggle" class="btn-sound" title="Toggle sound" aria-pressed="false">🔊</button>
+        <span id="gold">Gold: 120</span>
+        <span id="coins" class="coins">Coins: 0</span>
+        <span id="lives">Base HP: 20/20</span>
+        <span id="wave">Wave: 1 / 15</span>
+        <span id="diff-wrap" class="diff-wrap">Difficulty: <strong id="diff-label">Medium</strong></span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <label class="map-label" for="mode-select">Game mode</label>
+        <select id="mode-select" class="map-select">
+          <option value="campaign" selected>Campaign (waves)</option>
+          <option value="battle">Battle (3 min vs bot)</option>
+          <option value="special" id="mode-special-option">Special operation (portal)</option>
+          <option value="raider">Endurance raid (you spawn vs bot towers)</option>
+          <option value="war">War (dual HQ + bosses)</option>
+        </select>
+
+        <div id="campaign-controls">
+          <label class="map-label" for="map-select">Map</label>
+          <select id="map-select" class="map-select">
+            <option value="forest">Whisper Woods</option>
+            <option value="classic">Training Ground</option>
+            <option value="desert">Sunscar Dunes</option>
+            <option value="disco">Disco City</option>
+            <option value="snowy">Snowy Mountain</option>
+            <option value="factory">Big Factory</option>
+            <option value="coast">Tidal Coast</option>
+            <option value="metro">Metro Core</option>
+            <option value="enemys_base">Enemy's Base (+10% enemy HP &amp; speed)</option>
+            <option value="math_contest">Math Contest</option>
+            <option value="space_ribbon">Space Ribbon</option>
+          </select>
+
+          <label class="map-label" for="difficulty-select">Difficulty</label>
+          <select id="difficulty-select" class="map-select">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+            <option value="nightmare">Nightmare</option>
+            <option value="impossible">Impossible</option>
+          </select>
+        </div>
+
+        <div id="battle-controls" class="mode-extra" hidden>
+          <label class="map-label" for="battle-difficulty">Bot difficulty</label>
+          <select id="battle-difficulty" class="map-select">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+            <option value="challenge">Challenge</option>
+          </select>
+        </div>
+
+        <div id="raid-controls" class="mode-extra" hidden>
+          <p class="hint">Spawn any minion toward the enemy HQ. Strong types unlock as <strong>raid tier</strong> rises over time (starts low).</p>
+          <label class="map-label" for="raid-enemy-select">Enemy to spawn</label>
+          <select id="raid-enemy-select" class="map-select"></select>
+          <button type="button" id="raid-spawn-selected" class="btn-primary">Spawn selected</button>
+        </div>
+
+        <div id="special-controls" class="mode-extra" hidden>
+          <p class="hint">Unlocked after you <strong>beat Campaign</strong> on <strong>Easy</strong>, <strong>Medium</strong>, and <strong>Hard</strong> once each. Completing this run unlocks the <strong>Mystery shop</strong>.</p>
+          <label class="map-label" for="special-map-select">Map</label>
+          <select id="special-map-select" class="map-select">
+            <option value="forest">Whisper Woods</option>
+            <option value="desert">Sunscar Dunes</option>
+            <option value="disco">Disco City</option>
+            <option value="snowy">Snowy Mountain</option>
+            <option value="factory">Big Factory</option>
+            <option value="coast">Tidal Coast</option>
+            <option value="metro">Metro Core</option>
+            <option value="classic">Training Ground</option>
+            <option value="enemys_base">Enemy's Base (+10% enemy HP &amp; speed)</option>
+            <option value="math_contest">Math Contest</option>
+            <option value="space_ribbon">Space Ribbon</option>
+          </select>
+        </div>
+
+        <h2>Defenders</h2>
+        <p class="hint">Choose a type, then click a build cell. Click a tower to upgrade.</p>
+        <div id="defender-buttons" class="def-buttons"></div>
+
+        <div id="upgrade-panel" class="upgrade-panel" hidden>
+          <h3 id="upgrade-title">Tower</h3>
+          <p id="upgrade-meta" class="upgrade-meta"></p>
+          <div class="upgrade-actions">
+            <button type="button" id="upgrade-btn" class="btn-upgrade">Upgrade</button>
+            <button type="button" id="sell-tower-btn" class="btn-sell">Sell</button>
+            <button type="button" id="deselect-btn" class="btn-muted">Deselect</button>
+          </div>
+        </div>
+
+        <button type="button" id="codex-open" class="btn-codex">Field Index (enemies &amp; defenders)</button>
+        <button type="button" id="shop-open" class="btn-shop">Shop — open packs</button>
+
+        <p id="message" class="message"></p>
+      </aside>
+
+      <div class="canvas-wrap">
+        <div class="battle-tools">
+          <button type="button" id="bomb-btn" class="btn-bomb" title="One per battle — clears minions and wounds the boss">Emergency bomb (1)</button>
+        </div>
+        <canvas id="game" width="880" height="520" tabindex="0" aria-label="Tower Defense game — click to focus for keys"></canvas>
+
+        <div id="enemy-intro" class="enemy-intro hidden" role="dialog" aria-modal="true" aria-labelledby="enemy-intro-title">
+          <div class="enemy-intro-card">
+            <h2 id="enemy-intro-title">New enemy</h2>
+            <div id="enemy-intro-body" class="enemy-intro-body"></div>
+            <button type="button" id="enemy-intro-dismiss" class="btn-primary">Continue</button>
+          </div>
+        </div>
+
+        <div id="shop-modal" class="shop-modal hidden" role="dialog" aria-modal="true">
+          <div class="shop-inner">
+            <div class="shop-head">
+              <h2>Shop</h2>
+              <button type="button" id="shop-close" class="btn-muted">Close</button>
+            </div>
+            <p class="shop-sub">Spend <strong>coins</strong> (earned on victory) to open packs. Common defenders are always free in battle; pack defenders use your collection.</p>
+            <p class="shop-persist">Pack defenders you unlock are <strong>saved in this browser</strong> and stay in your collection across games — placing them in a battle does not remove them from your inventory.</p>
+            <p id="shop-coins" class="shop-coins-line">Your coins: 0</p>
+            <div id="pack-result" class="pack-result pack-result-global" aria-live="polite"></div>
+            <h3 class="shop-packs-heading">Classic packs</h3>
+            <div class="shop-packs">
+              <div class="pack-card">
+                <h3>Bot pack</h3>
+                <p class="pack-desc">35% empty. Else one bot — weighted: Calm 65, Sleepy 50, Angry 35, Brain 10, Ghost 1.</p>
+                <p class="pack-price"><span id="bot-pack-price">22</span> coins</p>
+                <button type="button" id="open-bot-pack" class="btn-primary btn-pack">Open Bot pack</button>
+              </div>
+              <div class="pack-card">
+                <h3>Space pack</h3>
+                <p class="pack-desc">32% empty. Else orbit &amp; cosmic units — Orbit Sentry through Singularity.</p>
+                <p class="pack-price"><span id="space-pack-price">26</span> coins</p>
+                <button type="button" id="open-space-pack" class="btn-primary btn-pack">Open Space pack</button>
+              </div>
+              <div class="pack-card">
+                <h3>Monster pack</h3>
+                <p class="pack-desc">33% empty. Else goblins, spores, magma, serpents, and eldritch horrors.</p>
+                <p class="pack-price"><span id="monster-pack-price">24</span> coins</p>
+                <button type="button" id="open-monster-pack" class="btn-primary btn-pack">Open Monster pack</button>
+              </div>
+              <div class="pack-card">
+                <h3>Math pack</h3>
+                <p class="pack-desc">30% empty. Else abacus, vectors, fractals, primes, and the golden spiral.</p>
+                <p class="pack-price"><span id="math-pack-price">28</span> coins</p>
+                <button type="button" id="open-math-pack" class="btn-primary btn-pack">Open Math pack</button>
+              </div>
+            </div>
+            <h3 class="shop-packs-heading">Curated packs</h3>
+            <div class="shop-packs">
+              <div class="pack-card">
+                <h3>Aurora Shelf</h3>
+                <p class="pack-desc">35% empty. Else prismatic defenders — Glimmer Turret through Dawnspire (rarer pulls weighted lower).</p>
+                <p class="pack-price"><span id="aurora-pack-price">22</span> coins</p>
+                <button type="button" id="open-aurora-pack" class="btn-primary btn-pack">Open Aurora Shelf</button>
+              </div>
+              <div class="pack-card">
+                <h3>Gearwright Box</h3>
+                <p class="pack-desc">32% empty. Else brass clockwork — Brass Pin through Clockwork Eye.</p>
+                <p class="pack-price"><span id="gear-pack-price">26</span> coins</p>
+                <button type="button" id="open-gear-pack" class="btn-primary btn-pack">Open Gearwright Box</button>
+              </div>
+              <div class="pack-card">
+                <h3>Trench Bloom</h3>
+                <p class="pack-desc">33% empty. Else reef &amp; tide units — Barnacle Post through Abyss Hum.</p>
+                <p class="pack-price"><span id="trench-pack-price">24</span> coins</p>
+                <button type="button" id="open-trench-pack" class="btn-primary btn-pack">Open Trench Bloom</button>
+              </div>
+              <div class="pack-card">
+                <h3>Nocturne Satchel</h3>
+                <p class="pack-desc">30% empty. Else night-sky defenders — Meteor Tick through Eclipse Pin.</p>
+                <p class="pack-price"><span id="nocturne-pack-price">28</span> coins</p>
+                <button type="button" id="open-nocturne-pack" class="btn-primary btn-pack">Open Nocturne Satchel</button>
+              </div>
+            </div>
+            <div id="mystery-shop-section" class="mystery-shop-section" hidden>
+              <h3 class="shop-packs-heading">Mystery shop</h3>
+              <p class="shop-sub">Unlocked by clearing a <strong>Special operation</strong> run. Hidden high-tier pulls.</p>
+              <div class="shop-packs">
+                <div class="pack-card pack-mystery">
+                  <h3>Covert crate A</h3>
+                  <p class="pack-desc">32% empty. Else rare+ defenders from multiple themes.</p>
+                  <p class="pack-price"><span id="mystery-pack-a-price">34</span> coins</p>
+                  <button type="button" id="open-mystery-pack-a" class="btn-primary btn-pack">Open Covert crate A</button>
+                </div>
+                <div class="pack-card pack-mystery">
+                  <h3>Covert crate B</h3>
+                  <p class="pack-desc">35% empty. Else top-tier &amp; mythical-weighted pulls.</p>
+                  <p class="pack-price"><span id="mystery-pack-b-price">42</span> coins</p>
+                  <button type="button" id="open-mystery-pack-b" class="btn-primary btn-pack">Open Covert crate B</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pack-reveal-modal" class="pack-reveal-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pack-reveal-title">
+          <div class="pack-reveal-inner">
+            <p id="pack-reveal-rarity" class="pack-reveal-rarity">Rare</p>
+            <h2 id="pack-reveal-title" class="pack-reveal-title">Defender</h2>
+            <canvas id="pack-reveal-canvas" width="280" height="200" aria-hidden="true"></canvas>
+            <p id="pack-reveal-hint" class="pack-reveal-hint">Added to your collection.</p>
+            <button type="button" id="pack-reveal-dismiss" class="btn-primary">Nice!</button>
+          </div>
+        </div>
+
+        <div id="codex-modal" class="codex-modal hidden" role="dialog" aria-modal="true">
+          <div class="codex-inner">
+            <div class="codex-head">
+              <h2>Field Index</h2>
+              <button type="button" id="codex-close" class="btn-muted">Close</button>
+            </div>
+            <p class="codex-sub">Reference for enemy types and defenders. HP examples scale with wave and difficulty.</p>
+            <h3 class="codex-section-title">Enemies</h3>
+            <div id="codex-enemies" class="codex-grid"></div>
+            <h3 class="codex-section-title">Defenders</h3>
+            <div id="codex-defenders" class="codex-grid"></div>
+          </div>
+        </div>
+
+        <div id="overlay" class="overlay hidden">
+          <div class="overlay-card">
+            <h2 id="overlay-title">Game Over</h2>
+            <p id="overlay-text"></p>
+            <button type="button" id="restart">Play again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
