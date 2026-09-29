@@ -474,3 +474,6 @@ body {
 .opt.drawback.on { border-color: var(--gold); background: #453313; }
 .opt:disabled { opacity: 0.4; cursor: not-allowed; }
 .germ.build { border-style: dashed; }
+
+.sound-row { margin-top: 18px; }
+.sound-toggle.off { opacity: 0.5; }

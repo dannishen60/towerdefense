@@ -52,6 +52,36 @@
       desc: "Engineered to kill. Extremely lethal — maybe too lethal.",
       mods: { inf: 1.1, sev: 1.2, leth: 2.2, cure: 1, air: 1, sea: 1, land: 1 },
     },
+    {
+      id: "frost", name: "Frost Spore", icon: "❄️",
+      desc: "Loves the cold. Thrives in freezing countries but withers in hot ones.",
+      mods: { inf: 1.1, sev: 1, leth: 1, cure: 0.9, air: 1, sea: 1.2, land: 1 },
+      start: { cold: 0.8, heat: -0.35 },
+    },
+    {
+      id: "sandfever", name: "Sand Fever", icon: "🏜️",
+      desc: "Born in the desert. Thrives in hot countries but freezes in cold ones.",
+      mods: { inf: 1.1, sev: 1, leth: 1.1, cure: 0.9, air: 1, sea: 1, land: 1.3 },
+      start: { heat: 0.8, cold: -0.35, poor: 0.06 },
+    },
+    {
+      id: "neuroworm", name: "Neuro-Worm", icon: "🪰",
+      desc: "Burrows into the brain. Almost invisible to doctors, and very hard to cure.",
+      mods: { inf: 0.9, sev: 0.35, leth: 0.9, cure: 0.55, air: 1, sea: 1, land: 1 },
+    },
+    {
+      id: "necro", name: "Necro Strain", icon: "🧟",
+      desc: "The dead get back up and infect the living — until nobody healthy is left.",
+      mods: { inf: 1.15, sev: 1.6, leth: 1.4, cure: 1, air: 0.9, sea: 0.9, land: 1.4 },
+      reanimate: 0.02,
+    },
+    {
+      id: "alien", name: "Alien Spore", icon: "👽",
+      desc: "Not from this planet. Powerful everywhere, but the world spots it on day one.",
+      mods: { inf: 1.45, sev: 1, leth: 1.2, cure: 0.85, air: 1.3, sea: 1.3, land: 1.3 },
+      start: { cold: 0.6, heat: 0.6, rich: 0.06, poor: 0.06 },
+      noticedAtStart: true,
+    },
   ];
 
   /* ---- Build-your-own germ ----

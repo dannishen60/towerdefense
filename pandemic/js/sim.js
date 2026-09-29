@@ -201,6 +201,13 @@
         c.H += healed - newI;
         c.I += newI - deaths - healed;
         c.D += deaths;
+        // Reanimating germs drag the dead back up, but only while there is still
+        // someone healthy to attack — otherwise the outbreak could never end.
+        if (germ.reanimate && c.H >= 1 && !s.cureDeployed) {
+          const risen = Math.min(c.D, c.D * germ.reanimate);
+          c.D -= risen;
+          c.I += risen;
+        }
         if (c.H < 1 && c.I >= 1) { c.I += c.H; c.H = 0; }
         if (c.I < 1) {
           if (deathRate > 0 && c.H < 1) c.D += c.I; else c.H += c.I;

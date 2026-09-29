@@ -1,5 +1,6 @@
 /* Plague World — screens, map rendering and input. */
 (function () {
+  const { audio } = window.PW;
   const { GERMS, TRAITS, CATS, createSim, buildWorld,
           CUSTOM_OPTIONS, CUSTOM_ICONS, POINT_BUDGET, buildCustomGerm, customSpent, customConflict } = window.PW;
   const $ = (s) => document.querySelector(s);
@@ -35,6 +36,25 @@
     $$(".screen").forEach((s) => s.classList.toggle("active", s.id === id));
   }
   $$("[data-back]").forEach((b) => b.addEventListener("click", () => show(b.dataset.back)));
+
+  // ---------- Sound ----------
+  function paintSoundButtons() {
+    $$(".sound-toggle").forEach((b) => {
+      b.textContent = audio.enabled ? "🔊" : "🔇";
+      b.classList.toggle("off", !audio.enabled);
+      b.setAttribute("aria-pressed", String(audio.enabled));
+    });
+  }
+  $$(".sound-toggle").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); audio.toggle(); paintSoundButtons(); }));
+  paintSoundButtons();
+  // Browsers only let audio start from a real gesture, so open the mixer on the first click.
+  document.addEventListener("pointerdown", () => audio.unlock(), { once: true });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b || b.disabled || b.classList.contains("sound-toggle")) return;
+    const goesBack = b.dataset.back !== undefined || b.id === "btn-again";
+    audio.play(goesBack ? "back" : "click");
+  }, true);
 
   $("#btn-start").addEventListener("click", () => { renderGerms(); show("screen-germ"); });
 
@@ -290,6 +310,7 @@
     b.el.on("click", (ev) => {
       ev.stopPropagation();
       sim.addDna(b.value);
+      audio.play("pop");
       popBubble(b);
       updateHud();
     });
@@ -326,7 +347,10 @@
       case "vehicle": addVehicle(d.vehicle); break;
       case "vehicleArrived": removeVehicle(d.vehicle); break;
       case "bubble": addBubble(c, d.value, d.kind); break;
+      case "evolved": audio.play("evolve"); break;
+      case "devolved": audio.play("devolve"); break;
       case "countryInfected":
+        audio.play(d.how === "start" ? "plague" : "infect");
         if (d.how === "start") news(`Patient zero: ${diseaseName} begins in ${c.name}.`, true);
         else if (d.how === "plane") news(`✈ An infected passenger landed in ${c.name}.`);
         else if (d.how === "ship") news(`⚓ Infected sailors came ashore in ${c.name}.`);
@@ -334,22 +358,25 @@
         else if (c.pop > 1e6) news(`Travellers carried ${diseaseName} to ${c.name}.`);
         break;
       case "noticed": {
+        audio.play("alert");
         const top = world.countries.reduce((a, b) => (b.I > a.I ? b : a));
         news(`🔬 Doctors in ${top.name} report a strange new ${germ.name.toLowerCase()}: "${diseaseName}".`, true);
         break;
       }
       case "firstDeath":
+        audio.play("death");
         if (sim.state.totals.D < 5) news(`☠ First deaths from ${diseaseName} reported in ${c.name}.`, true);
         break;
       case "closed":
+        if (c.pop > 2e6) audio.play("close");
         if (c.pop > 2e6) news(`🚫 ${c.name} closes its ${d.what}.`);
         break;
       case "countryDead":
         if (c.pop > 1e6) news(`☠ ${c.name} has fallen silent.`);
         break;
-      case "mutation": news(`🧬 ${diseaseName} mutated and gained ${d.trait.name}!`, true); break;
-      case "cureProgress": news(`💉 Cure research is ${d.pct}% complete.`, true); break;
-      case "cureDeployed": news(`💉 The cure is complete and being given out worldwide!`, true); break;
+      case "mutation": audio.play("evolve"); news(`🧬 ${diseaseName} mutated and gained ${d.trait.name}!`, true); break;
+      case "cureProgress": audio.play("cure"); news(`💉 Cure research is ${d.pct}% complete.`, true); break;
+      case "cureDeployed": audio.play("cure"); news(`💉 The cure is complete and being given out worldwide!`, true); break;
       case "over": setTimeout(() => showOver(d), 900); break;
     }
   }
@@ -582,6 +609,7 @@
       msg = "Tip: spread everywhere before adding deadly symptoms, and buy Genetic Hardening to slow the cure.";
     }
     $("#over-unlock").textContent = msg;
+    audio.play(o.win ? "win" : "lose");
     $("#over").classList.remove("hidden");
   }
   $("#btn-again").addEventListener("click", () => {
