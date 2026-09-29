@@ -54,6 +54,65 @@
     },
   ];
 
+  /* ---- Build-your-own germ ----
+   * The player spends POINT_BUDGET points on powers. Drawbacks have a negative
+   * cost, so taking one hands points back to spend elsewhere. */
+  const POINT_BUDGET = 10;
+
+  const CUSTOM_ICONS = ["🦠", "🧫", "🍄", "🪱", "🧠", "🤖", "☣️", "👾", "🐛", "🦑", "💀", "🐙", "🌡️", "🧪", "🫧", "🕷️"];
+
+  // `apply` fields: mul multiplies a germ mod, add adds a starting bonus, set sets a flag.
+  const CUSTOM_OPTIONS = [
+    { id: "cont1", name: "Contagious", cost: 3, desc: "Spreads noticeably faster inside every country.", apply: { mul: { inf: 1.25 } } },
+    { id: "cont2", name: "Super Contagious", cost: 6, desc: "Spreads twice as fast inside every country.", apply: { mul: { inf: 1.6 } } },
+    { id: "airborne", name: "Born Airborne", cost: 3, desc: "Starts able to ride on planes.", apply: { add: { air: 0.6 } } },
+    { id: "waterborne", name: "Born Waterborne", cost: 3, desc: "Starts able to ride on ships.", apply: { add: { sea: 0.6 } } },
+    { id: "crawler", name: "Border Crawler", cost: 2, desc: "Crosses land borders much more easily.", apply: { mul: { land: 1.8 } } },
+    { id: "stealth", name: "Stealthy", cost: 4, desc: "Symptoms are only half as noticeable, so the world spots it late.", apply: { mul: { sev: 0.5 } } },
+    { id: "deadly", name: "Deadly", cost: 3, desc: "Kills much faster — but dead people stop spreading it.", apply: { mul: { leth: 1.8 } } },
+    { id: "hardy", name: "Hard to Cure", cost: 4, desc: "Scientists research the cure 25% slower.", apply: { mul: { cure: 0.75 } } },
+    { id: "cold", name: "Cold Blooded", cost: 2, desc: "Starts resistant to freezing countries.", apply: { add: { cold: 0.5 } } },
+    { id: "heat", name: "Heat Proof", cost: 2, desc: "Starts resistant to scorching countries.", apply: { add: { heat: 0.5 } } },
+    { id: "mutator", name: "Mutator", cost: 3, desc: "Randomly grows new symptoms for free, like a virus.", apply: { set: { mutates: true } } },
+    { id: "dnaboost", name: "DNA Head Start", cost: 2, desc: "Begin the game with 12 extra DNA to spend.", apply: { set: { startDna: 12 } } },
+
+    { id: "obvious", name: "Obvious", cost: -3, drawback: true, desc: "Doctors spot it on day one, so the cure starts immediately.", apply: { set: { noticedAtStart: true } } },
+    { id: "feeble", name: "Feeble", cost: -3, drawback: true, desc: "Spreads 20% slower inside every country.", apply: { mul: { inf: 0.8 } } },
+    { id: "fastcure", name: "Easy to Cure", cost: -2, drawback: true, desc: "Scientists research the cure 30% faster.", apply: { mul: { cure: 1.3 } } },
+    { id: "homebody", name: "Homebody", cost: -2, drawback: true, desc: "Much less likely to survive a plane or ship journey.", apply: { mul: { air: 0.6, sea: 0.6 } } },
+  ];
+
+  const CONFLICTS = [["cont1", "cont2", "feeble"], ["hardy", "fastcure"], ["airborne", "homebody"], ["waterborne", "homebody"]];
+
+  function customConflict(id, chosen) {
+    for (const group of CONFLICTS) {
+      if (!group.includes(id)) continue;
+      const other = group.find((o) => o !== id && chosen.has(o));
+      if (other) return CUSTOM_OPTIONS.find((o) => o.id === other);
+    }
+    return null;
+  }
+
+  const customSpent = (chosen) =>
+    CUSTOM_OPTIONS.reduce((sum, o) => (chosen.has(o.id) ? sum + o.cost : sum), 0);
+
+  function buildCustomGerm(chosen, icon, name) {
+    const germ = {
+      id: "custom", name: name || "Custom Germ", icon: icon || "👾", custom: true,
+      desc: "A germ you designed yourself.",
+      mods: { inf: 1, sev: 1, leth: 1, cure: 1, air: 1, sea: 1, land: 1 },
+      start: {},
+      options: [...chosen],
+    };
+    for (const o of CUSTOM_OPTIONS) {
+      if (!chosen.has(o.id)) continue;
+      for (const [k, v] of Object.entries(o.apply.mul || {})) germ.mods[k] *= v;
+      for (const [k, v] of Object.entries(o.apply.add || {})) germ.start[k] = (germ.start[k] || 0) + v;
+      Object.assign(germ, o.apply.set || {});
+    }
+    return germ;
+  }
+
   const T = (id, cat, name, cost, eff, desc, req, reqAll) => ({ id, cat, name, cost, eff, desc, req: req || [], reqAll: reqAll || [] });
 
   const TRAITS = [
@@ -118,6 +177,12 @@
 
   root.PW = root.PW || {};
   root.PW.GERMS = GERMS;
+  root.PW.POINT_BUDGET = POINT_BUDGET;
+  root.PW.CUSTOM_ICONS = CUSTOM_ICONS;
+  root.PW.CUSTOM_OPTIONS = CUSTOM_OPTIONS;
+  root.PW.customConflict = customConflict;
+  root.PW.customSpent = customSpent;
+  root.PW.buildCustomGerm = buildCustomGerm;
   root.PW.TRAITS = TRAITS;
   root.PW.CATS = CATS;
 })(typeof window !== "undefined" ? window : globalThis);

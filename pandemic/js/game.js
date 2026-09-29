@@ -1,6 +1,7 @@
 /* Plague World — screens, map rendering and input. */
 (function () {
-  const { GERMS, TRAITS, CATS, createSim, buildWorld } = window.PW;
+  const { GERMS, TRAITS, CATS, createSim, buildWorld,
+          CUSTOM_OPTIONS, CUSTOM_ICONS, POINT_BUDGET, buildCustomGerm, customSpent, customConflict } = window.PW;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
 
@@ -37,27 +38,111 @@
 
   $("#btn-start").addEventListener("click", () => { renderGerms(); show("screen-germ"); });
 
+  function germCard(icon, name, desc, opts) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "germ" + (opts.locked ? " locked" : "") + (opts.selected ? " selected" : "") + (opts.build ? " build" : "");
+    b.disabled = !!opts.locked;
+    b.innerHTML = `<span class="germ-icon"></span><span class="germ-name"></span><span class="germ-desc"></span>`;
+    b.querySelector(".germ-icon").textContent = icon;
+    b.querySelector(".germ-name").textContent = name;
+    b.querySelector(".germ-desc").textContent = desc;
+    b.addEventListener("click", opts.onClick);
+    return b;
+  }
+
   function renderGerms() {
     const grid = $("#germ-grid");
     grid.innerHTML = "";
     GERMS.forEach((g, i) => {
       const locked = i > unlocked;
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "germ" + (locked ? " locked" : "") + (g === germ ? " selected" : "");
-      b.disabled = locked;
-      b.innerHTML = `<span class="germ-icon">${locked ? "🔒" : g.icon}</span><span class="germ-name"></span><span class="germ-desc"></span>`;
-      b.querySelector(".germ-name").textContent = g.name;
-      b.querySelector(".germ-desc").textContent = locked ? `Win with ${GERMS[i - 1].name} to unlock` : g.desc;
-      b.addEventListener("click", () => { germ = g; renderGerms(); });
-      grid.appendChild(b);
+      grid.appendChild(germCard(locked ? "🔒" : g.icon, g.name,
+        locked ? `Win with ${GERMS[i - 1].name} to unlock` : g.desc,
+        { locked, selected: g.id === germ.id && !germ.custom, onClick: () => { germ = g; renderGerms(); } }));
     });
+    grid.appendChild(germCard(custom.icon, "Build your own",
+      "Design a germ from scratch: spend points on powers and weaknesses.",
+      { build: true, selected: germ.custom, onClick: () => { renderBuilder(); show("screen-custom"); } }));
   }
 
-  $("#btn-germ-next").addEventListener("click", () => {
+  // ---------- Germ builder ----------
+  const BUILD_KEY = "plagueworld.custom";
+  const custom = { chosen: new Set(), icon: CUSTOM_ICONS[7], name: "" };
+  try {
+    const saved = JSON.parse(localStorage.getItem(BUILD_KEY) || "null");
+    if (saved) {
+      const valid = saved.chosen.filter((id) => CUSTOM_OPTIONS.some((o) => o.id === id));
+      if (customSpent(new Set(valid)) <= POINT_BUDGET) custom.chosen = new Set(valid);
+      if (CUSTOM_ICONS.includes(saved.icon)) custom.icon = saved.icon;
+      custom.name = (saved.name || "").slice(0, 18);
+    }
+  } catch { /* storage unavailable or corrupt — start from the default build */ }
+  function saveBuild() {
+    try {
+      localStorage.setItem(BUILD_KEY, JSON.stringify({ chosen: [...custom.chosen], icon: custom.icon, name: custom.name }));
+    } catch { /* storage unavailable */ }
+  }
+
+  function renderBuilder() {
+    const left = POINT_BUDGET - customSpent(custom.chosen);
+    $("#points-left").textContent = left;
+    $("#points-fill").style.width = (100 * Math.max(0, left)) / POINT_BUDGET + "%";
+    $("#custom-name").value = custom.name;
+
+    const icons = $("#icon-row");
+    icons.innerHTML = "";
+    for (const ic of CUSTOM_ICONS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "icon-pick" + (ic === custom.icon ? " sel" : "");
+      b.textContent = ic;
+      b.title = "Use this look";
+      b.addEventListener("click", () => { custom.icon = ic; saveBuild(); renderBuilder(); });
+      icons.appendChild(b);
+    }
+
+    for (const [sel, drawback] of [["#power-grid", false], ["#weak-grid", true]]) {
+      const grid = $(sel);
+      grid.innerHTML = "";
+      for (const o of CUSTOM_OPTIONS.filter((x) => !!x.drawback === drawback)) {
+        const on = custom.chosen.has(o.id);
+        const clash = on ? null : customConflict(o.id, custom.chosen);
+        const tooDear = !on && o.cost > left;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "opt" + (on ? " on" : "") + (drawback ? " drawback" : "");
+        b.disabled = !on && (!!clash || tooDear);
+        b.setAttribute("aria-pressed", String(on));
+        b.innerHTML = `<span class="opt-top"><span class="opt-name"></span><span class="opt-cost"></span></span><span class="opt-desc"></span>`;
+        b.querySelector(".opt-name").textContent = o.name;
+        b.querySelector(".opt-cost").textContent = o.cost < 0 ? `+${-o.cost} pts` : `${o.cost} pts`;
+        b.querySelector(".opt-desc").textContent = clash ? `Doesn't go with ${clash.name}.` : tooDear ? `Not enough points left.` : o.desc;
+        b.addEventListener("click", () => {
+          if (on) custom.chosen.delete(o.id); else custom.chosen.add(o.id);
+          saveBuild();
+          renderBuilder();
+        });
+        grid.appendChild(b);
+      }
+    }
+  }
+
+  $("#custom-name").addEventListener("input", (e) => { custom.name = e.target.value; saveBuild(); });
+  $("#btn-custom-reset").addEventListener("click", () => { custom.chosen.clear(); custom.name = ""; saveBuild(); renderBuilder(); });
+  $("#btn-custom-next").addEventListener("click", () => {
+    germ = buildCustomGerm(custom.chosen, custom.icon, custom.name.trim());
+    goToNaming();
+  });
+
+  function goToNaming() {
     $("#name-germ-icon").textContent = germ.icon;
     show("screen-name");
     setTimeout(() => $("#disease-name").focus(), 50);
+  }
+
+  $("#btn-germ-next").addEventListener("click", () => {
+    if (germ.custom) { renderBuilder(); show("screen-custom"); return; }
+    goToNaming();
   });
 
   $("#name-form").addEventListener("submit", async (ev) => {
@@ -485,9 +570,11 @@
       <div><span>Dead</span><b>${fmt(s.totals.D)}</b></div>
       <div><span>Countries reached</span><b>${s.totals.infectedCountries}</b></div>
       <div><span>Cure</span><b>${(s.cure * 100).toFixed(0)}%</b></div>`;
-    const idx = GERMS.indexOf(germ);
+    const idx = GERMS.findIndex((g) => g.id === germ.id);
     let msg = "";
-    if (o.win && idx === unlocked && unlocked < GERMS.length - 1) {
+    if (o.win && germ.custom) {
+      msg = "Custom germs don't unlock anything — beat the listed germs in order for that.";
+    } else if (o.win && idx === unlocked && unlocked < GERMS.length - 1) {
       unlocked++;
       saveUnlocked(unlocked);
       msg = `🔓 New germ unlocked: ${GERMS[unlocked].icon} ${GERMS[unlocked].name}!`;

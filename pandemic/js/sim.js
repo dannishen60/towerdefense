@@ -23,7 +23,7 @@
 
     const s = {
       germ, world, worldPop,
-      day: 0, time: 0, dna: 5,
+      day: 0, time: 0, dna: 5 + (germ.startDna || 0),
       owned: new Set(),
       eff: {},
       noticed: false, cure: 0, cureDeployed: false,

@@ -31,6 +31,42 @@
     </div>
   </section>
 
+  <!-- Build your own germ -->
+  <section id="screen-custom" class="screen">
+    <div class="panel-card">
+      <h2>Build your own germ</h2>
+      <p class="hint">Spend your points on powers. Taking a weakness gives points back.</p>
+
+      <div class="build-top">
+        <div>
+          <label class="field-label" for="custom-name">Germ name</label>
+          <input id="custom-name" type="text" maxlength="18" placeholder="Custom Germ" autocomplete="off" />
+        </div>
+        <div>
+          <span class="field-label">Look</span>
+          <div id="icon-row" class="icon-row"></div>
+        </div>
+      </div>
+
+      <div class="points-bar">
+        <span>Points left</span>
+        <b id="points-left">10</b>
+        <div class="points-track"><div id="points-fill"></div></div>
+      </div>
+
+      <h3 class="build-head">Powers</h3>
+      <div id="power-grid" class="option-grid"></div>
+      <h3 class="build-head">Weaknesses <span class="sub">(give points back)</span></h3>
+      <div id="weak-grid" class="option-grid"></div>
+
+      <div class="row">
+        <button type="button" class="btn btn-ghost" data-back="screen-germ">Back</button>
+        <button type="button" id="btn-custom-reset" class="btn btn-ghost">Clear</button>
+        <button type="button" id="btn-custom-next" class="btn">Use this germ</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Name disease -->
   <section id="screen-name" class="screen">
     <div class="panel-card name-card">
