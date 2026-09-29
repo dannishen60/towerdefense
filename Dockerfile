@@ -9,6 +9,7 @@ COPY app.py .
 COPY index.html styles.css ./static/
 COPY js ./static/js/
 COPY assets ./static/assets/
+COPY pandemic ./static/pandemic/
 
 ENV PYTHONUNBUFFERED=1
 

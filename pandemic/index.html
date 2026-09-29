@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plague World</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Title -->
+  <section id="screen-title" class="screen active">
+    <div class="title-card">
+      <div class="title-icon">🦠</div>
+      <h1>Plague World</h1>
+      <p class="tagline">Can you infect the entire world?</p>
+      <button type="button" id="btn-start" class="btn btn-big">Start</button>
+      <a class="back-link" href="../">← Back to Tower Defense</a>
+    </div>
+  </section>
+
+  <!-- Choose germ -->
+  <section id="screen-germ" class="screen">
+    <div class="panel-card">
+      <h2>Choose your germ</h2>
+      <p class="hint">Beat the game to unlock the next germ.</p>
+      <div id="germ-grid" class="germ-grid"></div>
+      <div class="row">
+        <button type="button" class="btn btn-ghost" data-back="screen-title">Back</button>
+        <button type="button" id="btn-germ-next" class="btn">Next</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Name disease -->
+  <section id="screen-name" class="screen">
+    <div class="panel-card name-card">
+      <div id="name-germ-icon" class="title-icon">🦠</div>
+      <h2>Name your disease</h2>
+      <form id="name-form">
+        <input id="disease-name" type="text" maxlength="24" placeholder="e.g. Purple Sneezles" autocomplete="off" required />
+        <div class="row">
+          <button type="button" class="btn btn-ghost" data-back="screen-germ">Back</button>
+          <button type="submit" class="btn btn-big">Go!</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen">
+    <div class="news" id="news"><span class="news-tag">NEWS</span><span id="news-text">Choose a country to start your infection.</span></div>
+
+    <div id="map-wrap" class="map-wrap">
+      <svg id="map" role="img" aria-label="World map"></svg>
+      <div id="pick-banner" class="pick-banner">Click a country to start the infection</div>
+      <div id="country-info" class="country-info hidden"></div>
+      <div class="zoom-btns">
+        <button type="button" id="zoom-in" class="btn-icon" title="Zoom in">+</button>
+        <button type="button" id="zoom-out" class="btn-icon" title="Zoom out">−</button>
+        <button type="button" id="zoom-reset" class="btn-icon" title="Reset view">⟲</button>
+      </div>
+      <div class="legend">
+        <span><i class="lg-air">✈</i> Airport</span>
+        <span><i class="lg-sea">⚓</i> Seaport</span>
+        <span><i class="lg-inf"></i> Infected</span>
+        <span><i class="lg-dead"></i> Dead</span>
+      </div>
+    </div>
+
+    <footer class="hud">
+      <div class="hud-left">
+        <div class="disease-title"><span id="hud-icon">🦠</span> <strong id="hud-name">Disease</strong></div>
+        <button type="button" id="btn-evolve" class="btn btn-dna">🧬 <span id="hud-dna">0</span> DNA · Evolve</button>
+      </div>
+      <div class="hud-mid">
+        <div class="world-bar" title="World population">
+          <div id="bar-healthy" class="seg healthy"></div><div id="bar-infected" class="seg infected"></div><div id="bar-dead" class="seg dead"></div>
+        </div>
+        <div class="world-stats">
+          <span>Healthy <b id="st-healthy">0</b></span>
+          <span class="t-inf">Infected <b id="st-infected">0</b></span>
+          <span class="t-dead">Dead <b id="st-dead">0</b></span>
+        </div>
+        <div class="cure-row">
+          <span>💉 Cure</span>
+          <div class="cure-bar"><div id="cure-fill"></div></div>
+          <b id="cure-pct">—</b>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div id="hud-date" class="date">Day 0</div>
+        <div class="speed">
+          <button type="button" class="btn-icon" data-speed="0" title="Pause">⏸</button>
+          <button type="button" class="btn-icon active" data-speed="1" title="Normal speed">▶</button>
+          <button type="button" class="btn-icon" data-speed="2" title="Fast">⏩</button>
+          <button type="button" class="btn-icon" data-speed="3" title="Fastest">⏭</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Evolution -->
+    <div id="evo" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="evo-title">
+      <div class="modal-card evo-card">
+        <div class="evo-head">
+          <h2 id="evo-title">Evolution</h2>
+          <span class="evo-dna">🧬 <b id="evo-dna">0</b> DNA</span>
+          <button type="button" class="btn-icon close" data-close="evo" title="Close">✕</button>
+        </div>
+        <div class="evo-stats">
+          <div><span>Infectivity</span><div class="meter"><div id="m-inf"></div></div></div>
+          <div><span>Severity</span><div class="meter"><div id="m-sev"></div></div></div>
+          <div><span>Lethality</span><div class="meter"><div id="m-leth"></div></div></div>
+        </div>
+        <div id="evo-tabs" class="tabs"></div>
+        <div class="evo-body">
+          <div id="evo-grid" class="trait-grid"></div>
+          <div id="evo-detail" class="trait-detail"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game over -->
+    <div id="over" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card over-card">
+        <div id="over-icon" class="title-icon">☠️</div>
+        <h2 id="over-title">Victory</h2>
+        <p id="over-reason"></p>
+        <div id="over-stats" class="over-stats"></div>
+        <p id="over-unlock" class="unlock"></p>
+        <button type="button" id="btn-again" class="btn btn-big">Play again</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="loading" class="loading hidden">Loading world map…</div>
+
+  <script src="lib/d3.min.js"></script>
+  <script src="lib/topojson-client.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/routes.js"></script>
+  <script src="js/traits.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
