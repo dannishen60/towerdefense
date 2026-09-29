@@ -477,3 +477,39 @@ body {
 
 .sound-row { margin-top: 18px; }
 .sound-toggle.off { opacity: 0.5; }
+
+/* ---------- Death log ---------- */
+.hud-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-deaths { padding: 10px 14px; }
+.btn-deaths.pulse { animation: dna-pulse 1.4s ease-in-out infinite; }
+.deaths-card { width: min(720px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.deaths-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
+.deaths-summary div { background: var(--panel-2); border-radius: 10px; padding: 9px 11px; display: flex; flex-direction: column; gap: 2px; }
+.deaths-summary span { color: var(--muted); font-size: 12px; }
+.deaths-summary b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.deaths-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+#deaths-filter {
+  flex: 1;
+  min-width: 180px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+#deaths-filter:focus { outline: none; border-color: var(--red); }
+.check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.deaths-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.victim { background: var(--panel-2); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--line); }
+.victim.first { border-left-color: var(--red); }
+.victim-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.victim-name { font-weight: 700; }
+.victim-when { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.victim-line { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.victim-line b { color: var(--text); font-weight: 600; }
+.victim-cause { font-size: 13px; margin-top: 3px; color: #ff9095; }
+.victim-tag { background: var(--red); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.06em; }
+.deaths-empty { color: var(--muted); padding: 18px 2px; }
+.deaths-note { margin: 10px 0 0; }
+.over-actions { justify-content: center; align-items: center; }

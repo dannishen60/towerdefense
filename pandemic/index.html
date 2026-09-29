@@ -107,7 +107,10 @@
     <footer class="hud">
       <div class="hud-left">
         <div class="disease-title"><span id="hud-icon">🦠</span> <strong id="hud-name">Disease</strong></div>
-        <button type="button" id="btn-evolve" class="btn btn-dna">🧬 <span id="hud-dna">0</span> DNA · Evolve</button>
+        <div class="hud-buttons">
+          <button type="button" id="btn-evolve" class="btn btn-dna">🧬 <span id="hud-dna">0</span> DNA · Evolve</button>
+          <button type="button" id="btn-deaths" class="btn btn-ghost btn-deaths">☠ Deaths</button>
+        </div>
       </div>
       <div class="hud-mid">
         <div class="world-bar" title="World population">
@@ -157,6 +160,23 @@
       </div>
     </div>
 
+    <!-- Death log -->
+    <div id="deaths" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deaths-title">
+      <div class="modal-card deaths-card">
+        <div class="evo-head">
+          <h2 id="deaths-title">Casualty report</h2>
+          <button type="button" class="btn-icon close" data-close="deaths" title="Close">✕</button>
+        </div>
+        <div id="deaths-summary" class="deaths-summary"></div>
+        <div class="deaths-tools">
+          <input type="search" id="deaths-filter" placeholder="Search a name, country or job…" autocomplete="off" />
+          <label class="check"><input type="checkbox" id="deaths-first" /> First death in each country only</label>
+        </div>
+        <ul id="deaths-list" class="deaths-list"></ul>
+        <p class="hint deaths-note">Every person listed here is made up by the game.</p>
+      </div>
+    </div>
+
     <!-- Game over -->
     <div id="over" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-card over-card">
@@ -165,7 +185,10 @@
         <p id="over-reason"></p>
         <div id="over-stats" class="over-stats"></div>
         <p id="over-unlock" class="unlock"></p>
-        <button type="button" id="btn-again" class="btn btn-big">Play again</button>
+        <div class="row over-actions">
+          <button type="button" id="btn-over-deaths" class="btn btn-ghost">☠ Death log</button>
+          <button type="button" id="btn-again" class="btn btn-big">Play again</button>
+        </div>
       </div>
     </div>
   </section>
@@ -175,6 +198,7 @@
   <script src="lib/d3.min.js"></script>
   <script src="lib/topojson-client.min.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/victims.js"></script>
   <script src="js/data.js"></script>
   <script src="js/routes.js"></script>
   <script src="js/traits.js"></script>

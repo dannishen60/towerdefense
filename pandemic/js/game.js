@@ -1,6 +1,6 @@
 /* Plague World — screens, map rendering and input. */
 (function () {
-  const { audio } = window.PW;
+  const { audio, makeVictim } = window.PW;
   const { GERMS, TRAITS, CATS, createSim, buildWorld,
           CUSTOM_OPTIONS, CUSTOM_ICONS, POINT_BUDGET, buildCustomGerm, customSpent, customConflict } = window.PW;
   const $ = (s) => document.querySelector(s);
@@ -30,6 +30,12 @@
   let speed = 1, speedBeforeModal = 1;
   let selected = null;
   let lastDay = -1;
+
+  // Death log: invented people, so the player can see who the plague took.
+  const MAX_VICTIMS = 500;
+  let victims = [];
+  let victimId = 0;
+  let prevDeaths = [];
 
   // ---------- Screens ----------
   function show(id) {
@@ -365,6 +371,7 @@
       }
       case "firstDeath":
         audio.play("death");
+        recordVictim(c, true);
         if (sim.state.totals.D < 5) news(`☠ First deaths from ${diseaseName} reported in ${c.name}.`, true);
         break;
       case "closed":
@@ -388,6 +395,11 @@
     bubbles.forEach((b) => b.el.remove());
     bubbles = [];
     newsQueue.length = 0;
+    victims = [];
+    victimId = 0;
+    prevDeaths = world.countries.map(() => 0);
+    $("#deaths-filter").value = "";
+    $("#deaths-first").checked = false;
     sim = createSim(world, germ, { onEvent });
     phase = "pick";
     selected = null;
@@ -400,6 +412,7 @@
     $("#country-info").classList.add("hidden");
     $("#over").classList.add("hidden");
     $("#evo").classList.add("hidden");
+    $("#deaths").classList.add("hidden");
     svg.call(zoom.transform, d3.zoomIdentity);
     paintMap();
     updateHud();
@@ -456,7 +469,8 @@
     }
     else if (["1", "2", "3"].includes(e.key)) setSpeed(Number(e.key));
     else if (e.key === "e" || e.key === "E") toggleEvo();
-    else if (e.key === "Escape") closeModal("evo");
+    else if (e.key === "d" || e.key === "D") toggleDeaths();
+    else if (e.key === "Escape") { closeModal("evo"); closeModal("deaths"); }
   });
 
   // ---------- HUD ----------
@@ -469,6 +483,11 @@
   }
 
   const START_DATE = new Date(2026, 0, 1);
+  function dateOn(day) {
+    const d = new Date(START_DATE);
+    d.setDate(d.getDate() + day);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
   function updateHud() {
     const s = sim.state, t = s.totals, P = s.worldPop;
     $("#hud-dna").textContent = s.dna;
@@ -480,8 +499,8 @@
     $("#bar-dead").style.width = (100 * t.D) / P + "%";
     $("#cure-fill").style.width = s.cure * 100 + "%";
     $("#cure-pct").textContent = s.noticed ? (s.cure * 100).toFixed(1) + "%" : "Not started";
-    const d = new Date(START_DATE); d.setDate(d.getDate() + s.day);
-    $("#hud-date").textContent = s.started ? `Day ${s.day} · ${d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}` : "Day 0";
+    $("#hud-date").textContent = s.started ? `Day ${s.day} · ${dateOn(s.day)}` : "Day 0";
+    $("#btn-deaths").classList.toggle("pulse", victims.length > 0 && $("#deaths").classList.contains("hidden") && s.totals.D >= 1);
     $("#btn-evolve").classList.toggle("pulse", phase === "play" && TRAITS.some((tr) => sim.canEvolve(tr)));
     if (!$("#evo").classList.contains("hidden")) renderEvo();
   }
@@ -505,7 +524,7 @@
     const m = $("#" + id);
     if (m.classList.contains("hidden")) return;
     m.classList.add("hidden");
-    if (id === "evo" && phase !== "over") setSpeed(speedBeforeModal || 1);
+    if (id !== "over" && phase === "play") setSpeed(speedBeforeModal || 1);
   }
 
   const EFF_LABELS = {
@@ -583,6 +602,116 @@
     }
   }
 
+  // ---------- Death log ----------
+  // The simulation only counts people; these records put names to a few of them.
+  function causeOfDeath() {
+    const symptoms = TRAITS.filter((t) => t.cat === "sym" && sim.state.owned.has(t.id));
+    if (!symptoms.length) return "the unnamed illness";
+    // The nastiest symptoms are the likeliest killers.
+    const worst = symptoms.slice().sort((a, b) => (b.eff.leth || 0) - (a.eff.leth || 0));
+    const top = worst.slice(0, 4);
+    return top[Math.floor(Math.random() * top.length)].name;
+  }
+
+  function recordVictim(c, first) {
+    if (!sim || !sim.state.started) return;
+    const day = sim.state.day;
+    victims.push(makeVictim(c, day, dateOn(day), causeOfDeath(), Math.random, { id: ++victimId, first }));
+    if (victims.length > MAX_VICTIMS) victims.shift();
+    if (!$("#deaths").classList.contains("hidden")) renderDeaths();
+  }
+
+  // Once a day, name someone from a country where deaths are climbing.
+  function recordDailyVictim() {
+    const rising = [];
+    let total = 0;
+    for (const c of world.countries) {
+      const delta = c.D - prevDeaths[c.idx];
+      prevDeaths[c.idx] = c.D;
+      if (delta >= 1) { rising.push({ c, delta }); total += delta; }
+    }
+    if (!rising.length) return;
+    // Pick a country in proportion to how many died there today.
+    let roll = Math.random() * total;
+    for (const r of rising) {
+      roll -= r.delta;
+      if (roll <= 0) { recordVictim(r.c, false); return; }
+    }
+    recordVictim(rising[rising.length - 1].c, false);
+  }
+
+  $("#btn-deaths").addEventListener("click", () => toggleDeaths());
+  $("#deaths").addEventListener("click", (e) => { if (e.target.id === "deaths") closeModal("deaths"); });
+  $("#deaths-filter").addEventListener("input", renderDeaths);
+  $("#deaths-first").addEventListener("change", renderDeaths);
+
+  function toggleDeaths() {
+    if (!sim) return;
+    const m = $("#deaths");
+    if (!m.classList.contains("hidden")) return closeModal("deaths");
+    if (phase === "play") { speedBeforeModal = speed || 1; setSpeed(0); }
+    m.classList.remove("hidden");
+    renderDeaths();
+  }
+
+  function renderDeaths() {
+    const s = sim.state;
+    const withDeaths = world.countries.filter((c) => c.D >= 1);
+    const worst = withDeaths.slice().sort((a, b) => b.D - a.D)[0];
+    const firstEver = victims.find((v) => v.first);
+    $("#deaths-summary").innerHTML = `
+      <div><span>Total dead</span><b class="t-inf">${fmt(s.totals.D)}</b></div>
+      <div><span>Countries with deaths</span><b>${withDeaths.length}</b></div>
+      <div><span>Worst hit</span><b>${worst ? worst.name : "—"}</b></div>
+      <div><span>Named in this log</span><b>${victims.length}</b></div>`;
+
+    const q = $("#deaths-filter").value.trim().toLowerCase();
+    const onlyFirst = $("#deaths-first").checked;
+    const rows = victims
+      .filter((v) => (!onlyFirst || v.first) &&
+        (!q || `${v.name} ${v.country} ${v.where} ${v.job} ${v.cause}`.toLowerCase().includes(q)))
+      .slice()
+      .reverse();
+
+    const list = $("#deaths-list");
+    list.innerHTML = "";
+    if (!rows.length) {
+      const li = document.createElement("li");
+      li.className = "deaths-empty";
+      li.textContent = victims.length
+        ? "Nobody in the log matches that search."
+        : firstEver ? "No deaths recorded yet." : "Nobody has died yet. Give it time.";
+      list.appendChild(li);
+      return;
+    }
+    for (const v of rows) {
+      const li = document.createElement("li");
+      li.className = "victim" + (v.first ? " first" : "");
+      li.innerHTML = `
+        <div class="victim-top">
+          <span><span class="victim-name"></span><span class="victim-age"></span></span>
+          <span class="victim-when"></span>
+        </div>
+        <div class="victim-line"></div>
+        <div class="victim-cause"></div>`;
+      li.querySelector(".victim-name").textContent = v.name;
+      li.querySelector(".victim-age").textContent = `, ${v.age}`;
+      li.querySelector(".victim-when").textContent = `Day ${v.day} · ${v.date}`;
+      li.querySelector(".victim-line").innerHTML = `${v.job} in <b></b>, <b></b>`;
+      const places = li.querySelectorAll(".victim-line b");
+      places[0].textContent = v.where;
+      places[1].textContent = v.country;
+      li.querySelector(".victim-cause").textContent = `Died of ${v.cause} · caught it ${v.caught}`;
+      if (v.first) {
+        const tag = document.createElement("span");
+        tag.className = "victim-tag";
+        tag.textContent = "FIRST HERE";
+        li.querySelector(".victim-top").appendChild(tag);
+      }
+      list.appendChild(li);
+    }
+  }
+
   // ---------- Game over ----------
   function showOver(o) {
     phase = "over";
@@ -612,6 +741,7 @@
     audio.play(o.win ? "win" : "lose");
     $("#over").classList.remove("hidden");
   }
+  $("#btn-over-deaths").addEventListener("click", () => { $("#deaths").classList.remove("hidden"); renderDeaths(); });
   $("#btn-again").addEventListener("click", () => {
     $("#over").classList.add("hidden");
     renderGerms();
@@ -633,6 +763,7 @@
       }
       if (sim.state.day !== lastDay) {
         lastDay = sim.state.day;
+        recordDailyVictim();
         paintMap();
         updateHud();
         if (selected) renderCountryInfo();
