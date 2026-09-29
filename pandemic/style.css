@@ -27,7 +27,7 @@ body {
 /* ---------- Screens ---------- */
 .screen { display: none; position: fixed; inset: 0; }
 .screen.active { display: flex; }
-#screen-title, #screen-germ, #screen-name {
+#screen-title, #screen-germ, #screen-name, #screen-custom {
   align-items: center;
   justify-content: center;
   padding: 16px;
@@ -393,6 +393,28 @@ body {
   .build-top { gap: 12px; }
 }
 
+/* ---------- Germ builder ----------
+   The builder is taller than a phone screen, so the card itself scrolls while the
+   points bar and the action buttons stay pinned in view. */
+#screen-custom .panel-card { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+#screen-custom .points-bar {
+  position: sticky;
+  top: -1px;
+  z-index: 2;
+  margin: 0 0 14px;
+  padding: 10px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+#screen-custom .row {
+  position: sticky;
+  bottom: -1px;
+  z-index: 2;
+  margin-top: 0;
+  padding: 14px 0 0;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
 /* ---------- Germ builder ---------- */
 .build-top { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
 .field-label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
